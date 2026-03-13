@@ -25,6 +25,10 @@ JsxposedX 是一个面向 Xposed/LSPosed 和 Frida 工作流的 Flutter Android 
 - 内置文档位于 `assets/raws/JsxposedX_API.md`、`assets/raws/JsxposedX_API_en.md`、`assets/raws/Frida_API.md`、`assets/raws/Frida_API_en.md`
 - `Repository` 标签页当前还是占位页
 
+## 相关仓库
+
+- Frida 模块仓库：[`dugongzi/jsxposedx-frida`](https://github.com/dugongzi/jsxposedx-frida)
+
 ## Quick Functions
 
 当前代码里的 quick-function key：

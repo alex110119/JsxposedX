@@ -28,6 +28,10 @@ JsxposedX is a Flutter Android application for Xposed/LSPosed and Frida workflow
   `assets/raws/Frida_API.md`, and `assets/raws/Frida_API_en.md`
 - `Repository` tab is currently a placeholder page
 
+## Related Repositories
+
+- Frida module repository: [`dugongzi/jsxposedx-frida`](https://github.com/dugongzi/jsxposedx-frida)
+
 ## Quick Functions
 
 Current quick-function keys in code:
