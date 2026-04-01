@@ -7,6 +7,10 @@ on:
     branches: ["master"]
   workflow_dispatch:
 
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,11 +32,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Show env
-        run: |
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          echo "FLUTTER_ROOT=$FLUTTER_ROOT"
-
       - name: Flutter pub get
         run: flutter pub get
 
@@ -42,8 +41,6 @@ jobs:
           sdk.dir=${ANDROID_SDK_ROOT}
           flutter.sdk=${FLUTTER_ROOT}
           EOF
-          echo "----- android/local.properties -----"
-          cat android/local.properties
 
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
@@ -56,16 +53,25 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --stacktrace
 
+      - name: Locate APKs
+        run: |
+          echo "=== APK files ==="
+          find . -type f -name "*.apk" | sort
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            build/app/outputs/flutter-apk/*debug*.apk
+            android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/*release*.apk
+            android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
