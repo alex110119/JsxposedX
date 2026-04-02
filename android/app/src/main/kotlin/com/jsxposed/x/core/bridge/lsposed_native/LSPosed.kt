@@ -26,7 +26,8 @@ class LSPosed(private val context: Context) {
                 XposedServiceHelper.registerListener(object : XposedServiceHelper.OnServiceListener {
                     override fun onServiceBind(service: XposedService) {
                         xposedService = service
-                        LogX.d(TAG, "XposedService connected, API=${service.getAPIVersion()}")
+                        // API 101: getAPIVersion() → getApiVersion()
+                        LogX.d(TAG, "XposedService connected, API=${service.apiVersion}")
                         migrateLocalToRemote(context, service)
                         XposedScriptSnapshotRepository(context).rebuildAllSnapshots()
                     }
@@ -114,16 +115,14 @@ class LSPosed(private val context: Context) {
                 LogX.d(TAG, "Scope already exists: $packageName")
                 return true
             }
-            service.requestScope(packageName, object : XposedService.OnScopeEventListener {
-                override fun onScopeRequestApproved(packageName: String) {
-                    LogX.d(TAG, "Scope request approved: $packageName")
+            // API 101: requestScope 接收 List<String> 而非单个 String
+            // OnScopeEventListener 移除了 onScopeRequestDenied
+            service.requestScope(listOf(packageName), object : XposedService.OnScopeEventListener {
+                override fun onScopeRequestApproved(approved: MutableList<String>) {
+                    LogX.d(TAG, "Scope request approved: $approved")
                 }
 
-                override fun onScopeRequestDenied(packageName: String) {
-                    LogX.w(TAG, "Scope request denied: $packageName")
-                }
-
-                override fun onScopeRequestFailed(packageName: String, message: String) {
+                override fun onScopeRequestFailed(message: String) {
                     LogX.e(TAG, "Scope request failed: $packageName, reason=$message")
                 }
             })
@@ -140,14 +139,10 @@ class LSPosed(private val context: Context) {
             return false
         }
         return try {
-            val error = service.removeScope(packageName)
-            if (error == null) {
-                LogX.d(TAG, "removeScope success: $packageName")
-                true
-            } else {
-                LogX.e(TAG, "removeScope failed: $error")
-                false
-            }
+            // API 101: removeScope 接收 List<String>，返回 void
+            service.removeScope(listOf(packageName))
+            LogX.d(TAG, "removeScope success: $packageName")
+            true
         } catch (e: Exception) {
             LogX.e(TAG, "removeScope failed: ${e.message}")
             false
