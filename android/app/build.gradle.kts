@@ -121,9 +121,9 @@ dependencies {
     implementation("io.github.skylot:jadx-dex-input:1.5.1") { isTransitive = true }
     implementation("org.smali:baksmali:2.5.2")
     implementation("org.smali:dexlib2:2.5.2")
-    // Xposed service 100
-    compileOnly(project(":libxposed:api"))
-    implementation(project(":libxposed:service"))
+    // Xposed service 101 将API订正至api101 2026-04-02 19:00
+    compileOnly("io.github.libxposed:api:101.0.1")
+    implementation("io.github.libxposed:service:101.0.1")
 }
 
 flutter {
