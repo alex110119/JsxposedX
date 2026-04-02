@@ -15,7 +15,7 @@ public abstract class XposedModule extends XposedInterfaceWrapper implements Xpo
      * @param base  The implementation interface provided by the framework, should not be used by the module
      * @param param Information about the process in which the module is loaded
      */
-    public XposedModule(@NonNull XposedInterface base, @NonNull ModuleLoadedParam param) {
-        super(base);
+    public XposedModule() {
+        
     }
 }
