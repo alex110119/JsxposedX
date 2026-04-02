@@ -28,7 +28,8 @@ class ModuleInterfaceParamWrapper(
 ) : LPParam {
     override val packageName get() = origin.packageName
     override val processName get() = lpparamProcessName
-    override val classLoader get() = origin.classLoader
+    // API 101: classLoader → defaultClassLoader
+    override val classLoader get() = origin.defaultClassLoader
     override val appInfo get() = origin.applicationInfo
     override val isFirstApplication get() = origin.isFirstPackage
 }
