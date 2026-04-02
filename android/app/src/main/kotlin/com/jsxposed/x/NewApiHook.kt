@@ -6,20 +6,18 @@ import com.jsxposed.x.core.utils.log.LogX
 import com.jsxposed.x.feature.hook.ModuleInterfaceParamWrapper
 import com.jsxposed.x.feature.hook.lpparamProcessName
 import de.robv.android.xposed.IXposedHookZygoteInit
-import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
-import io.github.libxposed.api.XposedModuleInterface
 import top.sacz.xphelper.XpHelper
 
-class NewApiHook(
-    base: XposedInterface,
-    param: XposedModuleInterface.ModuleLoadedParam
-) : XposedModule(base, param) {
+class NewApiHook : XposedModule() {
 
-    private val mainHook = MainHook()
+    private lateinit var mainHook: MainHook
 
-    init {
+    override fun onModuleLoaded(param: ModuleLoadedParam) {
+        super.onModuleLoaded(param)
+
         instance = this
+        mainHook = MainHook()
         lpparamProcessName = param.processName
 
         runCatching {
@@ -36,7 +34,7 @@ class NewApiHook(
     }
 
     @SuppressLint("DiscouragedPrivateApi")
-    override fun onPackageLoaded(param: XposedModuleInterface.PackageLoadedParam) {
+    override fun onPackageLoaded(param: PackageLoadedParam) {
         super.onPackageLoaded(param)
         mainHook.handleNewApiPackageLoaded(ModuleInterfaceParamWrapper(param))
     }
@@ -57,20 +55,7 @@ class NewApiHook(
         return instance
     }
 
-    // Compatible with API 101 (getModuleApplicationInfo) and API 100 (getApplicationInfo).
-    private fun resolveModulePathCompat(): String {
-        val appInfo = invokeAppInfoMethod("getModuleApplicationInfo")
-            ?: invokeAppInfoMethod("getApplicationInfo")
-        return appInfo?.sourceDir.orEmpty()
-    }
+   
 
-    private fun invokeAppInfoMethod(methodName: String): ApplicationInfo? {
-        return runCatching {
-            val method = this::class.java.methods.firstOrNull {
-                it.name == methodName && it.parameterCount == 0
-            } ?: return null
-            method.isAccessible = true
-            method.invoke(this) as? ApplicationInfo
-        }.getOrNull()
-    }
+   
 }
