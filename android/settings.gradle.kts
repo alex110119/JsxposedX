@@ -24,7 +24,3 @@ plugins {
 }
 
 include(":app")
-include(":libxposed:interface")
-include(":libxposed:service")
-include(":libxposed:api")
-include(":libxposed:checks")
