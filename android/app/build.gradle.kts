@@ -123,7 +123,7 @@ dependencies {
     implementation("org.smali:dexlib2:2.5.2")
     // Xposed service 101 将API订正至api101 2026-04-02 19:00
     compileOnly("io.github.libxposed:api:101.0.1")
-    implementation("io.github.libxposed:service:101.0.1")
+    
 }
 
 flutter {
