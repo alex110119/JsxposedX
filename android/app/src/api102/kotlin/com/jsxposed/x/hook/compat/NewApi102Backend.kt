@@ -99,8 +99,12 @@ class NewApi102Backend(private val module: XposedInterface) : HookBackend {
     }
 
     override fun log(message: String) {
-        // 与旧版 XposedBridge.log 保持完全一致的 tag，模块内的 logcat 控制台解析依赖它
+        // 1) logcat：应用内控制台按 logcat 解析 JXCONSOLE 协议，tag 必须保持 "Xposed"
         Log.i(LOG_TAG, message)
+
+        // 2) 框架日志：旧版 XposedBridge.log 会同时写入 LSPosed 的模块日志，
+        //    新 API 需要用 XposedInterface.log 才能让管理器日志页看到输出。
+        runCatching { module.log(Log.INFO, LOG_TAG, message) }
     }
 
     // ── 内部实现 ──
