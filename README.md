@@ -5,6 +5,65 @@
 - 中文：[`README_CN.md`](README_CN.md)
 - Release：[`Download`](https://jsxposed.org)
 - 沐雪AI中转站[`前往`](https://api.muxueai.pro)
+
+> **This repository / 本仓库说明**
+>
+> Forked from [`dugongzi/JsxposedX`](https://github.com/dugongzi/JsxposedX) at `6.1.1 (611)`.
+> The focus of this branch is making the module work again on **libxposed API 102**
+> (the new API shipped with LSPosed 2.x), where upstream fails to load. Current version `6.1.2 (612)`.
+> Project ownership and license are unchanged; only compatibility and build fixes are applied.
+> 中文详情见 [`README_CN.md`](README_CN.md)。
+
+## What changed in this fork
+
+**1. Module failed to load on API 102.**
+Upstream's entry `NewApiHook` mixed two API generations: `XpHelper` is an old internal interface no
+longer provided by API 102, and `MainHook` depends on `XposedHelpers` / `LoadPackageParam`, which only
+exist in the legacy API. On LSPosed 2.x the module was loaded but died at `onPackageLoaded` with
+`NoClassDefFoundError`, so scripts never ran.
+
+- Added a `hook/compat` layer: `HookBridge` (backend registry + dispatch), `HookBackend`,
+  `HookCallback`, `HookParam`, and `ReflectX` (self-contained reflection replacing `XposedHelpers`).
+  Business code no longer references `de.robv.android.xposed.*` directly.
+- Rebuilt the API 102 entry to use only the new API: `module.hook(executable).intercept(Chain)`,
+  restoring the original `before` / `proceed` / `after` / `invokeOriginal` semantics via
+  `Invoker.Type.ORIGIN`.
+- Moved the legacy implementation into the `src/legacy` source set shared by the `api100` / `api101`
+  flavors, leaving behaviour on the old API untouched.
+
+**2. Script logs missing in the LSPosed manager.**
+`XposedBridge.log` used to write to both logcat and the framework log. With the new API, calling only
+`Log.i` keeps the in-app console working but leaves the LSPosed log page empty. `NewApi102Backend.log()`
+now writes to both: `Log.i("Xposed", …)` for the in-app `JXCONSOLE` parser and
+`module.log(INFO, "Xposed", …)` for the framework log.
+
+**3. Windows builds stuck in CMake configure.**
+Keystone's bundled LLVM script runs `if(PYTHON_VERSION_STRING VERSION_LESS 2.7)`. On Windows, CMake
+often picks up the non-executable `C:\Windows\System32\python` app-execution alias, so
+`find_package(Python3)` fails, the variable stays empty and the `if()` becomes a syntax error:
+
+```
+CMake Error at .../keystone-src/llvm/CMakeLists.txt:346 (if):
+  if given arguments: "VERSION_LESS" "2.7"  Unknown arguments specified
+```
+
+`android/app/src/main/cpp/CMakeLists.txt` now probes `py -3` / `python3` / `python`, validates the
+major version, and falls back to a placeholder version string so configuration no longer hard-fails.
+
+**4. Build pipeline.**
+ProGuard gained `-dontwarn io.github.libxposed.**`; CI fetches the Gradle distribution from a mirror to
+avoid intermittent 504s from GitHub Releases; each release build prints the APK signing certificate
+SHA-256 and compares it with the upstream one.
+
+## Build & signing
+
+- GitHub Actions (`.github/workflows/build.yml`) builds the `api100` / `api101` / `api102` flavors for
+  debug and release, and can be triggered manually via `workflow_dispatch`.
+- Release signing uses repository secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+  `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`); the keystore itself is never committed.
+- Artifacts from this branch are signed by `CN=YiTan Interactive Entertainment`, which is **not** the
+  same key as the upstream release (`CN=沐雪社区`) — the two cannot be installed over each other.
+
 JsxposedX is a Flutter Android application for Xposed/LSPosed and Frida workflows.
 
 

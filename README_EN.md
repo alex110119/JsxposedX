@@ -3,7 +3,43 @@
 - Default README: [`README.md`](README.md)
 - Chinese documentation: [`README_CN.md`](README_CN.md)
 - Release：[`Download`](https://jsxposed.org)
-  
+
+> **About this fork**
+>
+> Forked from [`dugongzi/JsxposedX`](https://github.com/dugongzi/JsxposedX) at `6.1.1 (611)`.
+> This branch fixes module loading on **libxposed API 102** (the new API in LSPosed 2.x) and tidies up
+> the build pipeline. Current version `6.1.2 (612)`. Ownership and license are unchanged.
+
+## What changed
+
+**1. Module failed to load on API 102.** Upstream's entry mixed two API generations — `XpHelper`
+(an old internal interface no longer provided) and `MainHook` (`XposedHelpers` / `LoadPackageParam`,
+legacy-only) — so `onPackageLoaded` threw `NoClassDefFoundError` and scripts never ran. This fork adds a
+`hook/compat` layer (`HookBridge`, `HookBackend`, `HookCallback`, `HookParam`, `ReflectX`), rebuilds the
+API 102 entry on `module.hook(executable).intercept(Chain)` with `before` / `proceed` / `after` and
+`Invoker.Type.ORIGIN` semantics, and moves the legacy implementation into the `src/legacy` source set
+shared by the `api100` / `api101` flavors.
+
+**2. Script logs missing in the LSPosed manager.** `XposedBridge.log` wrote to both logcat and the
+framework log; calling only `Log.i` keeps the in-app console working but leaves the LSPosed log page
+empty. `NewApi102Backend.log()` now writes to both `Log.i("Xposed", …)` and `module.log(INFO, …)`.
+
+**3. Windows builds stuck in CMake configure.** Keystone's bundled LLVM script runs
+`if(PYTHON_VERSION_STRING VERSION_LESS 2.7)`; CMake may pick the non-executable
+`C:\Windows\System32\python` alias, leaving the variable empty and turning the `if()` into a syntax
+error. The project now probes `py -3` / `python3` / `python`, validates the major version, and falls
+back to a placeholder version string.
+
+**4. Build pipeline.** `-dontwarn io.github.libxposed.**` for R8, Gradle distribution fetched from a
+mirror in CI, and every release build prints the APK signing certificate SHA-256 for verification.
+
+## Build & signing
+
+GitHub Actions builds the `api100` / `api101` / `api102` flavors (debug + release) and supports manual
+`workflow_dispatch`. Release signing uses repository secrets; the keystore is never committed. Artifacts
+from this branch are signed by `CN=YiTan Interactive Entertainment`, which differs from the upstream
+release key (`CN=沐雪社区`), so the two cannot be installed over each other.
+
 JsxposedX is a Flutter Android application for Xposed/LSPosed and Frida workflows. It combines a
   Flutter UI layer with Android-side Xposed hooks, LSPosed service integration, native bridge
   modules, shared IDE run configurations, and PowerShell-based install/debug scripts.

@@ -4,6 +4,70 @@
 - 默认 README：[`README.md`](README.md)
 - 发布版本：[`Download`](https://jsxposed.org)
 
+> **关于本仓库**
+>
+> 本仓库取自 [`dugongzi/JsxposedX`](https://github.com/dugongzi/JsxposedX)，基线为 `6.1.1 (611)`，
+> 主要针对 **libxposed API 102（LSPosed 2.x 新 API）下模块无法正常工作** 的问题做了重构，
+> 当前版本 `6.1.2 (612)`。项目归属与开源协议不变，本分支只做兼容性修复与构建链路完善。
+
+## 相对上游的改动
+
+### 1. 模块在 API 102 下加载失败
+
+上游的模块入口 `NewApiHook` 同时混用了两套 API：`XpHelper` 是旧版内部接口，API 102 的
+LSPosed 已不再提供；`MainHook` 又依赖 `XposedHelpers`、`LoadPackageParam` 等旧 API 才有的类型。
+在 LSPosed 2.x 上的表现是：模块能被加载，日志走到 `Loading class com.jsxposed.x.NewApiHook`
+之后就不再往下，`onPackageLoaded` 阶段抛 `NoClassDefFoundError`，脚本完全不生效。
+
+本分支的处理方式：
+
+- **新增 `hook/compat` 抽象层**——`HookBridge`（后端注册与统一分发）、`HookBackend`、
+  `HookCallback`、`HookParam`、`ReflectX`（自实现反射工具，替代 `XposedHelpers`）。
+  业务代码只依赖这层抽象，不再直接引用 `de.robv.android.xposed.*`。
+- **API 102 入口彻底去 legacy**——`NewApi102Backend` 直接使用
+  `module.hook(executable).intercept(Chain)`，把原来的 `beforeHookedMethod` /
+  `afterHookedMethod` / `invokeOriginalMethod` 语义完整还原（原方法调用走
+  `Invoker.Type.ORIGIN`），构造方法 Hook 同样按 ORIGIN 方式调用。
+- **legacy 实现下沉**——原来基于 `de.robv` 的实现整体迁移到 `src/legacy` 源集，
+  由 `api100` / `api101` 两个 flavor 共用，行为与上游保持一致，不影响老框架用户。
+
+### 2. LSPosed 管理器里看不到脚本日志
+
+旧实现走 `XposedBridge.log`，会同时写入 logcat 和 LSPosed 的模块日志通道。改用新 API 后
+如果只调用 `Log.i`，应用内控制台正常，但 LSPosed 管理器的日志页是空的。现在
+`NewApi102Backend.log()` 同时写两处：`Log.i("Xposed", …)` 供应用内控制台解析 `JXCONSOLE`
+协议，`module.log(INFO, "Xposed", …)` 供 LSPosed 日志页展示。
+
+### 3. Windows 本地构建卡在 CMake 配置阶段
+
+`keystone` 依赖的 LLVM 脚本会执行 `if(PYTHON_VERSION_STRING VERSION_LESS 2.7)`。Windows 的
+PATH 里常有 `C:\Windows\System32\python` 这类「应用执行别名」（实际不可执行），CMake 选中
+它之后 `find_package(Python3)` 判定失败，变量为空，`if()` 直接语法报错：
+
+```
+CMake Error at .../keystone-src/llvm/CMakeLists.txt:346 (if):
+  if given arguments: "VERSION_LESS" "2.7"  Unknown arguments specified
+```
+
+`android/app/src/main/cpp/CMakeLists.txt` 增加了容错探测：依次尝试 `py -3` / `python3` /
+`python` 并校验主版本号，仍然找不到时给一个合法版本串兜底，保证配置阶段不再硬失败。
+
+### 4. 构建链路
+
+- ProGuard 增加 `-dontwarn io.github.libxposed.**`，避免 R8 在 release 构建报缺失类。
+- CI 中 Gradle 分发改用镜像，规避 GitHub Releases 偶发 504 导致的构建中断。
+- 构建完成后自动打印 APK 签名证书 SHA-256 并与原版比对，便于确认产物来源。
+
+## 构建说明
+
+- 构建走 GitHub Actions（`.github/workflows/build.yml`），覆盖 `api100` / `api101` / `api102`
+  三个 flavor 的 debug / release 组合，也支持手动 `workflow_dispatch` 指定单个 flavor。
+- release 签名由仓库 Secrets 注入（`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、
+  `ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`），密钥文件不入库。
+- 本分支产物的证书主体为 `CN=YiTan Interactive Entertainment`，与上游发行版的
+  `CN=沐雪社区` **不是同一把密钥**，两者无法相互覆盖安装，切换时需要卸载或使用
+  CorePatch 之类关闭签名校验的方案。
+
 JsxposedX 是一个面向 Xposed/LSPosed 和 Frida 工作流的 Flutter Android 应用。它把 Flutter UI 层、Android 侧的 Xposed Hook、LSPosed service 集成、原生 bridge 模块、共享 IDE 运行配置，以及 PowerShell 安装调试脚本放在同一个仓库里。
 
 
