@@ -1,9 +1,10 @@
 package com.jsxposed.x.feature.jsxposed.bridge
 
+import com.jsxposed.x.hook.compat.ReflectX
 import com.jsxposed.x.core.utils.log.LogX
 import com.whl.quickjs.wrapper.JSArray
 import com.whl.quickjs.wrapper.QuickJSContext
-import de.robv.android.xposed.XposedHelpers
+
 
 /**
  * 变量与属性强行读写桥接
@@ -16,7 +17,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return null
         return try {
-            val result = XposedHelpers.getObjectField(realObj, fieldName)
+            val result = ReflectX.getObjectField(realObj, fieldName)
             BridgeUtils.wrapJavaObject(qjs, result)
         } catch (e: Exception) {
             LogX.e(TAG, "getObjectField error: ${e.message}")
@@ -30,7 +31,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return null
         val value = BridgeUtils.unwrapJavaObject(args.getOrNull(2))
         try {
-            XposedHelpers.setObjectField(realObj, fieldName, value)
+            ReflectX.setObjectField(realObj, fieldName, value)
         } catch (e: Exception) {
             LogX.e(TAG, "setObjectField error: ${e.message}")
         }
@@ -41,8 +42,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return null
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            val result = XposedHelpers.getStaticObjectField(clazz, fieldName)
+            val clazz = ReflectX.findClass(className, classLoader)
+            val result = ReflectX.getStaticObjectField(clazz, fieldName)
             BridgeUtils.wrapJavaObject(qjs, result)
         } catch (e: Exception) {
             LogX.e(TAG, "getStaticObjectField error: ${e.message}")
@@ -55,8 +56,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = BridgeUtils.unwrapJavaObject(args.getOrNull(2))
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.setStaticObjectField(clazz, fieldName, value)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.setStaticObjectField(clazz, fieldName, value)
         } catch (e: Exception) {
             LogX.e(TAG, "setStaticObjectField error: ${e.message}")
         }
@@ -68,7 +69,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = args?.get(0) ?: return 0
         val fieldName = args.getOrNull(1)?.toString() ?: return 0
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return 0
-        return try { XposedHelpers.getIntField(realObj, fieldName) } catch (e: Exception) { 0 }
+        return try { ReflectX.getIntField(realObj, fieldName) } catch (e: Exception) { 0 }
     }
     
     fun setIntField(args: Array<Any?>?): Any? {
@@ -76,7 +77,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toInt() ?: 0
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return null
-        try { XposedHelpers.setIntField(realObj, fieldName, value) } catch (e: Exception) {}
+        try { ReflectX.setIntField(realObj, fieldName, value) } catch (e: Exception) {}
         return null
     }
     
@@ -84,7 +85,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = args?.get(0) ?: return false
         val fieldName = args.getOrNull(1)?.toString() ?: return false
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return false
-        return try { XposedHelpers.getBooleanField(realObj, fieldName) } catch (e: Exception) { false }
+        return try { ReflectX.getBooleanField(realObj, fieldName) } catch (e: Exception) { false }
     }
 
     fun setBooleanField(args: Array<Any?>?): Any? {
@@ -92,7 +93,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Boolean) ?: false
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return null
-        try { XposedHelpers.setBooleanField(realObj, fieldName, value) } catch (e: Exception) {}
+        try { ReflectX.setBooleanField(realObj, fieldName, value) } catch (e: Exception) {}
         return null
     }
 
@@ -100,7 +101,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = args?.get(0) ?: return 0L
         val fieldName = args.getOrNull(1)?.toString() ?: return 0L
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return 0L
-        return try { XposedHelpers.getLongField(realObj, fieldName) } catch (e: Exception) { 0L }
+        return try { ReflectX.getLongField(realObj, fieldName) } catch (e: Exception) { 0L }
     }
 
     fun setLongField(args: Array<Any?>?): Any? {
@@ -108,7 +109,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toLong() ?: 0L
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return null
-        try { XposedHelpers.setLongField(realObj, fieldName, value) } catch (e: Exception) {}
+        try { ReflectX.setLongField(realObj, fieldName, value) } catch (e: Exception) {}
         return null
     }
 
@@ -116,7 +117,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = args?.get(0) ?: return 0f
         val fieldName = args.getOrNull(1)?.toString() ?: return 0f
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return 0f
-        return try { XposedHelpers.getFloatField(realObj, fieldName) } catch (e: Exception) { 0f }
+        return try { ReflectX.getFloatField(realObj, fieldName) } catch (e: Exception) { 0f }
     }
 
     fun setFloatField(args: Array<Any?>?): Any? {
@@ -124,7 +125,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toFloat() ?: 0f
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return null
-        try { XposedHelpers.setFloatField(realObj, fieldName, value) } catch (e: Exception) {}
+        try { ReflectX.setFloatField(realObj, fieldName, value) } catch (e: Exception) {}
         return null
     }
 
@@ -132,7 +133,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = args?.get(0) ?: return 0.0
         val fieldName = args.getOrNull(1)?.toString() ?: return 0.0
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return 0.0
-        return try { XposedHelpers.getDoubleField(realObj, fieldName) } catch (e: Exception) { 0.0 }
+        return try { ReflectX.getDoubleField(realObj, fieldName) } catch (e: Exception) { 0.0 }
     }
 
     fun setDoubleField(args: Array<Any?>?): Any? {
@@ -140,7 +141,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toDouble() ?: 0.0
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return null
-        try { XposedHelpers.setDoubleField(realObj, fieldName, value) } catch (e: Exception) {}
+        try { ReflectX.setDoubleField(realObj, fieldName, value) } catch (e: Exception) {}
         return null
     }
 
@@ -148,7 +149,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = args?.get(0) ?: return 0
         val fieldName = args.getOrNull(1)?.toString() ?: return 0
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return 0
-        return try { XposedHelpers.getShortField(realObj, fieldName) } catch (e: Exception) { 0 }
+        return try { ReflectX.getShortField(realObj, fieldName) } catch (e: Exception) { 0 }
     }
 
     fun setShortField(args: Array<Any?>?): Any? {
@@ -156,7 +157,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toShort() ?: 0
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return null
-        try { XposedHelpers.setShortField(realObj, fieldName, value) } catch (e: Exception) {}
+        try { ReflectX.setShortField(realObj, fieldName, value) } catch (e: Exception) {}
         return null
     }
 
@@ -164,7 +165,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = args?.get(0) ?: return 0
         val fieldName = args.getOrNull(1)?.toString() ?: return 0
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return 0
-        return try { XposedHelpers.getByteField(realObj, fieldName) } catch (e: Exception) { 0 }
+        return try { ReflectX.getByteField(realObj, fieldName) } catch (e: Exception) { 0 }
     }
 
     fun setByteField(args: Array<Any?>?): Any? {
@@ -172,7 +173,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toByte() ?: 0
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return null
-        try { XposedHelpers.setByteField(realObj, fieldName, value) } catch (e: Exception) {}
+        try { ReflectX.setByteField(realObj, fieldName, value) } catch (e: Exception) {}
         return null
     }
 
@@ -180,7 +181,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = args?.get(0) ?: return '\u0000'
         val fieldName = args.getOrNull(1)?.toString() ?: return '\u0000'
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return '\u0000'
-        return try { XposedHelpers.getCharField(realObj, fieldName) } catch (e: Exception) { '\u0000' }
+        return try { ReflectX.getCharField(realObj, fieldName) } catch (e: Exception) { '\u0000' }
     }
 
     fun setCharField(args: Array<Any?>?): Any? {
@@ -189,7 +190,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val raw = args.getOrNull(2)?.toString() ?: ""
         val value = if (raw.isNotEmpty()) raw[0] else '\u0000'
         val realObj = BridgeUtils.unwrapJavaObject(obj) ?: return null
-        try { XposedHelpers.setCharField(realObj, fieldName, value) } catch (e: Exception) {}
+        try { ReflectX.setCharField(realObj, fieldName, value) } catch (e: Exception) {}
         return null
     }
 
@@ -199,8 +200,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return 0
         val fieldName = args.getOrNull(1)?.toString() ?: return 0
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.getStaticIntField(clazz, fieldName)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.getStaticIntField(clazz, fieldName)
         } catch (e: Exception) { 0 }
     }
 
@@ -209,8 +210,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toInt() ?: 0
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.setStaticIntField(clazz, fieldName, value)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.setStaticIntField(clazz, fieldName, value)
         } catch (e: Exception) {}
         return null
     }
@@ -219,8 +220,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return false
         val fieldName = args.getOrNull(1)?.toString() ?: return false
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.getStaticBooleanField(clazz, fieldName)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.getStaticBooleanField(clazz, fieldName)
         } catch (e: Exception) { false }
     }
 
@@ -229,8 +230,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Boolean) ?: false
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.setStaticBooleanField(clazz, fieldName, value)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.setStaticBooleanField(clazz, fieldName, value)
         } catch (e: Exception) {}
         return null
     }
@@ -239,8 +240,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return 0L
         val fieldName = args.getOrNull(1)?.toString() ?: return 0L
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.getStaticLongField(clazz, fieldName)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.getStaticLongField(clazz, fieldName)
         } catch (e: Exception) { 0L }
     }
 
@@ -249,8 +250,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toLong() ?: 0L
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.setStaticLongField(clazz, fieldName, value)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.setStaticLongField(clazz, fieldName, value)
         } catch (e: Exception) {}
         return null
     }
@@ -259,8 +260,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return 0f
         val fieldName = args.getOrNull(1)?.toString() ?: return 0f
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.getStaticFloatField(clazz, fieldName)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.getStaticFloatField(clazz, fieldName)
         } catch (e: Exception) { 0f }
     }
 
@@ -269,8 +270,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toFloat() ?: 0f
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.setStaticFloatField(clazz, fieldName, value)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.setStaticFloatField(clazz, fieldName, value)
         } catch (e: Exception) {}
         return null
     }
@@ -279,8 +280,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return 0.0
         val fieldName = args.getOrNull(1)?.toString() ?: return 0.0
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.getStaticDoubleField(clazz, fieldName)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.getStaticDoubleField(clazz, fieldName)
         } catch (e: Exception) { 0.0 }
     }
 
@@ -289,8 +290,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toDouble() ?: 0.0
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.setStaticDoubleField(clazz, fieldName, value)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.setStaticDoubleField(clazz, fieldName, value)
         } catch (e: Exception) {}
         return null
     }
@@ -299,8 +300,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return 0
         val fieldName = args.getOrNull(1)?.toString() ?: return 0
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.getStaticShortField(clazz, fieldName)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.getStaticShortField(clazz, fieldName)
         } catch (e: Exception) { 0 }
     }
 
@@ -309,8 +310,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toShort() ?: 0
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.setStaticShortField(clazz, fieldName, value)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.setStaticShortField(clazz, fieldName, value)
         } catch (e: Exception) {}
         return null
     }
@@ -319,8 +320,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return 0
         val fieldName = args.getOrNull(1)?.toString() ?: return 0
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.getStaticByteField(clazz, fieldName)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.getStaticByteField(clazz, fieldName)
         } catch (e: Exception) { 0 }
     }
 
@@ -329,8 +330,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val fieldName = args.getOrNull(1)?.toString() ?: return null
         val value = (args.getOrNull(2) as? Number)?.toByte() ?: 0
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.setStaticByteField(clazz, fieldName, value)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.setStaticByteField(clazz, fieldName, value)
         } catch (e: Exception) {}
         return null
     }
@@ -339,8 +340,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return '\u0000'
         val fieldName = args.getOrNull(1)?.toString() ?: return '\u0000'
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.getStaticCharField(clazz, fieldName)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.getStaticCharField(clazz, fieldName)
         } catch (e: Exception) { '\u0000' }
     }
 
@@ -350,8 +351,8 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val raw = args.getOrNull(2)?.toString() ?: ""
         val value = if (raw.isNotEmpty()) raw[0] else '\u0000'
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
-            XposedHelpers.setStaticCharField(clazz, fieldName, value)
+            val clazz = ReflectX.findClass(className, classLoader)
+            ReflectX.setStaticCharField(clazz, fieldName, value)
         } catch (e: Exception) {}
         return null
     }
@@ -363,7 +364,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val key = args?.getOrNull(1)?.toString() ?: return null
         val value = BridgeUtils.unwrapJavaObject(args?.getOrNull(2))
         try {
-            XposedHelpers.setAdditionalInstanceField(obj, key, value)
+            ReflectX.setAdditionalInstanceField(obj, key, value)
         } catch (e: Exception) {
             LogX.e(TAG, "setExtra error: ${e.message}")
         }
@@ -374,7 +375,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = BridgeUtils.unwrapJavaObject(args?.get(0)) ?: return null
         val key = args?.getOrNull(1)?.toString() ?: return null
         return try {
-            val result = XposedHelpers.getAdditionalInstanceField(obj, key)
+            val result = ReflectX.getAdditionalInstanceField(obj, key)
             BridgeUtils.wrapJavaObject(qjs, result)
         } catch (e: Exception) {
             LogX.e(TAG, "getExtra error: ${e.message}")
@@ -386,7 +387,7 @@ class JxFieldBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = BridgeUtils.unwrapJavaObject(args?.get(0)) ?: return null
         val key = args?.getOrNull(1)?.toString() ?: return null
         try {
-            XposedHelpers.removeAdditionalInstanceField(obj, key)
+            ReflectX.removeAdditionalInstanceField(obj, key)
         } catch (e: Exception) {
             LogX.e(TAG, "removeExtra error: ${e.message}")
         }

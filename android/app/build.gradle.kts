@@ -53,8 +53,8 @@ android {
         getByName("main") {
             java.srcDirs("src/main/java", "src/main/kotlin")
         }
-        maybeCreate("api100").java.srcDirs("src/api100/java", "src/api100/kotlin")
-        maybeCreate("api101").java.srcDirs("src/api101/java", "src/api101/kotlin")
+        maybeCreate("api100").java.srcDirs("src/api100/java", "src/api100/kotlin", "src/legacy/kotlin")
+        maybeCreate("api101").java.srcDirs("src/api101/java", "src/api101/kotlin", "src/legacy/kotlin")
         maybeCreate("api102").java.srcDirs("src/api102/java", "src/api102/kotlin")
     }
 
@@ -144,7 +144,12 @@ dependencies {
     compileOnly(files("src/lib/XposedBridgeAPI-89.jar"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("com.google.code.gson:gson:2.13.2")
-    implementation("com.github.suzhelan:XpHelper:2.7") {
+    // XpHelper 是 legacy API 实现，只允许 api100 / api101 打包；
+    // api102 禁止访问 de.robv.*，因此不能出现在它的 classpath 里。
+    add("api100Implementation", "com.github.suzhelan:XpHelper:2.7") {
+        exclude(group = "com.alibaba.fastjson2", module = "fastjson2")
+    }
+    add("api101Implementation", "com.github.suzhelan:XpHelper:2.7") {
         exclude(group = "com.alibaba.fastjson2", module = "fastjson2")
     }
 

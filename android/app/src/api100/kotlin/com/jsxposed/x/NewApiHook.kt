@@ -1,7 +1,7 @@
 package com.jsxposed.x
 
 import android.annotation.SuppressLint
-import com.jsxposed.x.feature.hook.LPParam
+import com.jsxposed.x.feature.hook.HookEntry
 import com.jsxposed.x.feature.hook.ModuleInterfaceParamWrapper
 import com.jsxposed.x.feature.hook.lpparamProcessName
 import de.robv.android.xposed.IXposedHookZygoteInit
@@ -10,13 +10,17 @@ import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface
 import top.sacz.xphelper.XpHelper
 
+/**
+ * libxposed API 100 模块入口（旧构造器形态）。
+ *
+ * 同样走 legacy 后端，包加载流程统一委派给 [HookEntry]。
+ */
 class NewApiHook(base: XposedInterface, param: XposedModuleInterface.ModuleLoadedParam) :
     XposedModule(base, param) {
 
-    private val mainHook = MainHook()
-
     init {
         instance = this
+        MainHook.ensureBackend()
         lpparamProcessName = param.processName
         try {
             val suparam = createStartupParam(this.applicationInfo.sourceDir)
@@ -28,11 +32,7 @@ class NewApiHook(base: XposedInterface, param: XposedModuleInterface.ModuleLoade
     @SuppressLint("DiscouragedPrivateApi")
     override fun onPackageLoaded(param: XposedModuleInterface.PackageLoadedParam) {
         super.onPackageLoaded(param)
-        forwardToRuntime(ModuleInterfaceParamWrapper(param))
-    }
-
-    private fun forwardToRuntime(lpparam: LPParam) {
-        mainHook.handleNewApiPackageLoaded(lpparam)
+        HookEntry.onPackageReady(ModuleInterfaceParamWrapper(param))
     }
 
     companion object {

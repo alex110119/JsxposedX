@@ -7,6 +7,10 @@
 -keep class de.robv.android.xposed.** { *; }
 -dontwarn de.robv.android.xposed.**
 
+# libxposed API（api101 / api102）由框架在宿主进程注入，仅参与编译
+-dontwarn io.github.libxposed.**
+-keep class io.github.libxposed.** { *; }
+
 # 保护 NativeProvider 相关类
 -keep class com.jsxposed.x.NativeProvider { *; }
 

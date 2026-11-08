@@ -1,5 +1,9 @@
 package com.jsxposed.x.feature.hook.quick_functions
 
+import com.jsxposed.x.hook.compat.HookBridge
+import com.jsxposed.x.hook.compat.HookCallback
+import com.jsxposed.x.hook.compat.HookParam
+import com.jsxposed.x.hook.compat.ReflectX
 import android.content.Context
 import android.widget.Toast
 import com.jsxposed.x.core.constants.QuickFunctionsConstant
@@ -8,8 +12,7 @@ import com.jsxposed.x.core.utils.log.LogX
 import com.jsxposed.x.core.utils.shell.QuickFunctionsUtils
 import com.jsxposed.x.feature.hook.HookImpl
 import com.jsxposed.x.feature.hook.LPParam
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
+
 
 class HookDialogKeyword(private val lpparam: LPParam) : HookImpl {
     private val keywordsList: MutableList<String> = QuickFunctionsUtils().getEnabledDialogKeywords(
@@ -31,21 +34,21 @@ class HookDialogKeyword(private val lpparam: LPParam) : HookImpl {
             return
         }
 
-        XposedHelpers.findAndHookMethod(
-            "android.app.Dialog", lpparam.classLoader, "show", object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam?) {
+        HookBridge.findAndHookMethod(
+            "android.app.Dialog", lpparam.classLoader, "show", object : HookCallback() {
+                override fun afterHookedMethod(param: HookParam) {
                     super.afterHookedMethod(param)
                     try {
                         val dialog = param?.thisObject
-                        val mAlertField = XposedHelpers.findField(dialog?.javaClass, "mAlert")
+                        val mAlertField = ReflectX.findField(dialog?.javaClass, "mAlert")
                         mAlertField.isAccessible = true
                         val alertController = mAlertField.get(dialog)
                         val mTitleField =
-                            XposedHelpers.findField(alertController.javaClass, "mTitle")
+                            ReflectX.findField(alertController.javaClass, "mTitle")
                         mTitleField.isAccessible = true
                         val title = mTitleField.get(alertController) as? CharSequence ?: ""
                         val mMessageField =
-                            XposedHelpers.findField(alertController.javaClass, "mMessage")
+                            ReflectX.findField(alertController.javaClass, "mMessage")
                         mMessageField.isAccessible = true
                         val message = mMessageField.get(alertController) as? CharSequence ?: ""
 

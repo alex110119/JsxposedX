@@ -1,12 +1,15 @@
 package com.jsxposed.x.feature.hook.quick_functions
 
+import com.jsxposed.x.hook.compat.HookBridge
+import com.jsxposed.x.hook.compat.HookCallback
+import com.jsxposed.x.hook.compat.HookParam
+import com.jsxposed.x.hook.compat.ReflectX
 import android.content.Context
 import android.content.pm.PackageInfo
 import com.jsxposed.x.core.utils.log.LogX
 import com.jsxposed.x.feature.hook.HookImpl
 import com.jsxposed.x.feature.hook.LPParam
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
+
 
 class HookModifiedVersion(private val lpparam: LPParam) : HookImpl {
 
@@ -25,7 +28,7 @@ class HookModifiedVersion(private val lpparam: LPParam) : HookImpl {
     override fun create() {
 
         try {
-            val packageManagerClass = XposedHelpers.findClass(
+            val packageManagerClass = ReflectX.findClass(
                 "android.app.ApplicationPackageManager",
                 context?.classLoader
             )
@@ -38,13 +41,13 @@ class HookModifiedVersion(private val lpparam: LPParam) : HookImpl {
     }
 
     private fun hookGetPackageInfoVariants(packageManagerClass: Class<*>) {
-        XposedHelpers.findAndHookMethod(
+        HookBridge.findAndHookMethod(
             packageManagerClass,
             "getPackageInfo",
             String::class.java,
             Int::class.javaPrimitiveType,
-            object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
+            object : HookCallback() {
+                override fun beforeHookedMethod(param: HookParam) {
                     handlePackageInfoHook(param)
                 }
             }
@@ -57,13 +60,13 @@ class HookModifiedVersion(private val lpparam: LPParam) : HookImpl {
                 context?.classLoader
             )
 
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 packageManagerClass,
                 "getPackageInfo",
                 String::class.java,
                 flagsClass,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
+                object : HookCallback() {
+                    override fun beforeHookedMethod(param: HookParam) {
                         handlePackageInfoHook(param)
                     }
                 }
@@ -80,16 +83,16 @@ class HookModifiedVersion(private val lpparam: LPParam) : HookImpl {
                 context?.classLoader
             )
 
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 packageManagerClass,
                 "getPackageInfo",
                 versionedPackageClass,
                 Int::class.javaPrimitiveType,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
+                object : HookCallback() {
+                    override fun beforeHookedMethod(param: HookParam) {
                         val versionedPackage = param.args[0]
                         val pkgName =
-                            XposedHelpers.callMethod(versionedPackage, "getPackageName") as String
+                            ReflectX.callMethod(versionedPackage, "getPackageName") as String
 
                         if (targetPackageName == pkgName) {
                             param.result = createFakePackageInfo(pkgName)
@@ -103,7 +106,7 @@ class HookModifiedVersion(private val lpparam: LPParam) : HookImpl {
         }
     }
 
-    private fun handlePackageInfoHook(param: XC_MethodHook.MethodHookParam) {
+    private fun handlePackageInfoHook(param: HookParam) {
         val pkgName = param.args[0] as? String ?: return
 
         if (targetPackageName == pkgName) {
@@ -113,15 +116,15 @@ class HookModifiedVersion(private val lpparam: LPParam) : HookImpl {
 
     private fun hookAdditionalVersionCheckMethods() {
         try {
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "android.app.ApplicationPackageManager",
                 context?.classLoader,
                 "getPackageInfoAsUser",
                 String::class.java,
                 Int::class.javaPrimitiveType,
                 Int::class.javaPrimitiveType,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
+                object : HookCallback() {
+                    override fun beforeHookedMethod(param: HookParam) {
                         val pkgName = param.args[0] as? String ?: return
                         if (targetPackageName == pkgName) {
                             param.result = createFakePackageInfo(pkgName)

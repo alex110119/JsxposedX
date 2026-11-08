@@ -32,12 +32,52 @@ FetchContent_MakeAvailable(capstone)
 
 find_package(Python3 COMPONENTS Interpreter)
 
+# Windows 上 PATH 里可能存在 C:\Windows\System32\python 这类“应用执行别名”，
+# CMake 会选中它但无法执行，导致 find_package 失败；随后 keystone 的
+# llvm/CMakeLists.txt 会在 if(PYTHON_VERSION_STRING VERSION_LESS 2.7) 处语法报错。
+# 这里补一次容错探测：优先用 py 启动器，再试 python3 / python，并校验确实是 3.x。
+if(NOT Python3_Interpreter_FOUND)
+    foreach(_jsx_py_name py python3 python)
+        unset(JSX_PYTHON_CANDIDATE CACHE)
+        find_program(JSX_PYTHON_CANDIDATE NAMES ${_jsx_py_name})
+        if(JSX_PYTHON_CANDIDATE)
+            if(_jsx_py_name STREQUAL "py")
+                set(_jsx_py_probe "${JSX_PYTHON_CANDIDATE}" -3 -c "import sys;print(sys.version_info[0])")
+            else()
+                set(_jsx_py_probe "${JSX_PYTHON_CANDIDATE}" -c "import sys;print(sys.version_info[0])")
+            endif()
+
+            execute_process(
+                COMMAND ${_jsx_py_probe}
+                OUTPUT_VARIABLE _jsx_py_major
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                RESULT_VARIABLE _jsx_py_result
+                ERROR_QUIET)
+
+            if(_jsx_py_result EQUAL 0 AND _jsx_py_major STREQUAL "3")
+                set(Python3_EXECUTABLE "${JSX_PYTHON_CANDIDATE}" CACHE FILEPATH "" FORCE)
+                set(Python3_Interpreter_FOUND TRUE)
+                message(STATUS "JsxposedX: 回退使用 Python3 解释器 ${JSX_PYTHON_CANDIDATE}")
+                break()
+            endif()
+        endif()
+    endforeach()
+    unset(JSX_PYTHON_CANDIDATE CACHE)
+endif()
+
 set(KEYSTONE_BUILD_STATIC_RUNTIME ON CACHE BOOL "" FORCE)
 set(BUILD_LIBS_ONLY ON CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(LLVM_TARGETS_TO_BUILD "ARM;AArch64" CACHE STRING "" FORCE)
 if(Python3_Interpreter_FOUND)
     set(PYTHON_EXECUTABLE "${Python3_EXECUTABLE}" CACHE FILEPATH "" FORCE)
+else()
+    # 兜底：keystone 只编译静态库，不实际执行 Python 脚本；
+    # 给一个合法的版本串即可让 LLVM 的 if() 判断通过，避免配置阶段硬失败。
+    message(WARNING "JsxposedX: 未找到可用的 Python3，使用占位版本串继续配置 keystone")
+    set(PYTHON_VERSION_STRING "3.11.0" CACHE STRING "" FORCE)
+    set(PYTHON_VERSION_MAJOR "3" CACHE STRING "" FORCE)
+    set(PYTHON_VERSION_MINOR "11" CACHE STRING "" FORCE)
 endif()
 
 FetchContent_Declare(

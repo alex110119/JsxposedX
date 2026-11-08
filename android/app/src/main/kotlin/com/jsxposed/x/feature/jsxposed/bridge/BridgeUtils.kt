@@ -1,9 +1,10 @@
 package com.jsxposed.x.feature.jsxposed.bridge
 
+import com.jsxposed.x.hook.compat.ReflectX
 import com.jsxposed.x.core.utils.log.LogX
 import com.whl.quickjs.wrapper.JSArray
 import com.whl.quickjs.wrapper.QuickJSContext
-import de.robv.android.xposed.XposedHelpers
+
 
 object BridgeUtils {
     
@@ -84,7 +85,7 @@ object BridgeUtils {
             // 处理数组类型，例如 byte[] -> [B, java.lang.String[] -> [Ljava.lang.String;
             else -> {
                 try {
-                    XposedHelpers.findClass(typeName, classLoader)
+                    ReflectX.findClass(typeName, classLoader)
                 } catch (e: Exception) {
                     LogX.e("BridgeUtils", "Failed to parse type: $typeName")
                     typeName // 直接透传字符串让 Xposed 自己解析

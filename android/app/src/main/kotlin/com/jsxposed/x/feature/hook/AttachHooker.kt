@@ -1,10 +1,12 @@
 package com.jsxposed.x.feature.hook
 
+import com.jsxposed.x.hook.compat.HookBridge
+import com.jsxposed.x.hook.compat.HookCallback
+import com.jsxposed.x.hook.compat.HookParam
 import android.content.Context
 import com.jsxposed.x.core.utils.log.LogX
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
 import java.util.Collections
+
 
 object AttachHooker {
 
@@ -32,13 +34,13 @@ object AttachHooker {
             }
 
             LogX.d(TAG, "AttachHooker.setupAttachHook package=${lpparam.packageName} process=${lpparam.processName} hooks=${hooks.size} callbacks=${attachCallbacks.size} classLoader=${lpparam.classLoader}")
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "android.app.Application",
                 lpparam.classLoader,
                 "attach",
                 Context::class.java,
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
+                object : HookCallback() {
+                    override fun afterHookedMethod(param: HookParam) {
                         val context = param.args[0] as? Context ?: return
                         val start = System.currentTimeMillis()
                         LogX.d(TAG, "AttachHooker.afterHookedMethod enter package=${lpparam.packageName} process=${lpparam.processName} thread=${Thread.currentThread().name} hooks=${hooks.size} callbacks=${attachCallbacks.size} context=${context.javaClass.name}")

@@ -1,13 +1,15 @@
 package com.jsxposed.x.feature.hook.quick_functions
 
+import com.jsxposed.x.hook.compat.HookBridge
+import com.jsxposed.x.hook.compat.HookCallback
+import com.jsxposed.x.hook.compat.HookParam
+import com.jsxposed.x.hook.compat.ReflectX
+import com.jsxposed.x.hook.compat.ReplaceCallback
 import android.content.Context
 import android.os.Build
 import com.jsxposed.x.core.utils.log.LogX
 import com.jsxposed.x.feature.hook.HookImpl
 import com.jsxposed.x.feature.hook.LPParam
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XC_MethodReplacement
-import de.robv.android.xposed.XposedHelpers
 import java.net.Socket
 import java.security.SecureRandom
 import java.security.cert.CertPath
@@ -21,6 +23,7 @@ import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509ExtendedTrustManager
 import javax.net.ssl.X509TrustManager
+
 
 class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
     lateinit var context: Context
@@ -41,12 +44,12 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
         // ==================== 1. Apache HttpClient Hook ====================
         try {
             // Hook DefaultHttpClient
-            XposedHelpers.findAndHookConstructor(
+            HookBridge.findAndHookConstructor(
                 "org.apache.http.impl.client.DefaultHttpClient",
                 lpparam.classLoader,
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        param.thisObject.javaClass.getDeclaredField("connManager").let {
+                object : HookCallback() {
+                    override fun afterHookedMethod(param: HookParam) {
+                        param.thisObject!!.javaClass.getDeclaredField("connManager").let {
                             it.isAccessible = true
                             it.set(param.thisObject, getTrustAllConnectionManager())
                         }
@@ -58,26 +61,26 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
 
         // ==================== 2. 标准JSSE Hook ====================
         // Hook TrustManagerFactory
-        XposedHelpers.findAndHookMethod(
+        HookBridge.findAndHookMethod(
             "javax.net.ssl.TrustManagerFactory",
             lpparam.classLoader,
             "getTrustManagers",
-            object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+            object : HookCallback() {
+                override fun afterHookedMethod(param: HookParam) {
                     param.result = arrayOf(getTrustManager())
                 }
             })
 
         // Hook SSLContext.init
-        XposedHelpers.findAndHookMethod(
+        HookBridge.findAndHookMethod(
             "javax.net.ssl.SSLContext",
             lpparam.classLoader,
             "init",
             Array<KeyManager>::class.java,
             Array<TrustManager>::class.java,
             SecureRandom::class.java,
-            object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
+            object : HookCallback() {
+                override fun beforeHookedMethod(param: HookParam) {
                     param.args[0] = null
                     param.args[1] = arrayOf(getTrustManager())
                     param.args[2] = null
@@ -86,16 +89,16 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
 
         // ==================== 3. WebView Hook ====================
         try {
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "android.webkit.WebViewClient",
                 lpparam.classLoader,
                 "onReceivedSslError",
-                XposedHelpers.findClass("android.webkit.WebView", lpparam.classLoader),
-                XposedHelpers.findClass("android.webkit.SslErrorHandler", lpparam.classLoader),
-                XposedHelpers.findClass("android.webkit.SslError", lpparam.classLoader),
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any? {
-                        XposedHelpers.callMethod(param.args[1], "proceed")
+                ReflectX.findClass("android.webkit.WebView", lpparam.classLoader),
+                ReflectX.findClass("android.webkit.SslErrorHandler", lpparam.classLoader),
+                ReflectX.findClass("android.webkit.SslError", lpparam.classLoader),
+                object : ReplaceCallback() {
+                    override fun replaceHookedMethod(param: HookParam): Any? {
+                        ReflectX.callMethod(param.args[1], "proceed")
                         return null
                     }
                 })
@@ -106,27 +109,27 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
         // ==================== 4. OkHttp Hook ====================
         try {
             // OkHttp 2.x
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "com.squareup.okhttp.CertificatePinner",
                 lpparam.classLoader,
                 "check",
                 String::class.java,
                 List::class.java,
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any {
+                object : ReplaceCallback() {
+                    override fun replaceHookedMethod(param: HookParam): Any {
                         return true
                     }
                 })
 
             // OkHttp 3.x
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "okhttp3.CertificatePinner",
                 lpparam.classLoader,
                 "check",
                 String::class.java,
                 List::class.java,
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any {
+                object : ReplaceCallback() {
+                    override fun replaceHookedMethod(param: HookParam): Any {
                         return true
                     }
                 })
@@ -137,7 +140,7 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
         // ==================== 5. 其他第三方库 Hook ====================
         // HttpClientAndroidLib
         try {
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "ch.boye.httpclientandroidlib.conn.ssl.AbstractVerifier",
                 lpparam.classLoader,
                 "verify",
@@ -145,8 +148,8 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
                 Array<String>::class.java,
                 Array<String>::class.java,
                 Boolean::class.java,
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any {
+                object : ReplaceCallback() {
+                    override fun replaceHookedMethod(param: HookParam): Any {
                         return true
                     }
                 })
@@ -156,13 +159,13 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
 
         // xUtils
         try {
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "org.xutils.http.RequestParams",
                 lpparam.classLoader,
                 "setSslSocketFactory",
                 SSLSocketFactory::class.java,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
+                object : HookCallback() {
+                    override fun beforeHookedMethod(param: HookParam) {
                         param.args[0] = createTrustAllSSLFactory()
                     }
                 })
@@ -209,43 +212,43 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
 
     private fun getTrustAllConnectionManager(): Any {
         return try {
-            val schemeRegistry = XposedHelpers.newInstance(
-                XposedHelpers.findClass(
+            val schemeRegistry = ReflectX.newInstance(
+                ReflectX.findClass(
                     "org.apache.http.conn.scheme.SchemeRegistry", lpparam.classLoader
                 )
             )
 
             // 创建信任所有证书的SSLSocketFactory
-            val sslSocketFactory = XposedHelpers.newInstance(
-                XposedHelpers.findClass(
+            val sslSocketFactory = ReflectX.newInstance(
+                ReflectX.findClass(
                     "org.apache.http.conn.ssl.SSLSocketFactory", lpparam.classLoader
                 ), getTrustManager()
             )
 
             // 注册HTTP和HTTPS协议
-            XposedHelpers.callMethod(
-                schemeRegistry, "register", XposedHelpers.newInstance(
-                    XposedHelpers.findClass(
+            ReflectX.callMethod(
+                schemeRegistry, "register", ReflectX.newInstance(
+                    ReflectX.findClass(
                         "org.apache.http.conn.scheme.Scheme", lpparam.classLoader
-                    ), "http", XposedHelpers.callStaticMethod(
-                        XposedHelpers.findClass(
+                    ), "http", ReflectX.callStaticMethod(
+                        ReflectX.findClass(
                             "org.apache.http.conn.scheme.PlainSocketFactory", lpparam.classLoader
                         ), "getSocketFactory"
                     ), 80
                 )
             )
 
-            XposedHelpers.callMethod(
-                schemeRegistry, "register", XposedHelpers.newInstance(
-                    XposedHelpers.findClass(
+            ReflectX.callMethod(
+                schemeRegistry, "register", ReflectX.newInstance(
+                    ReflectX.findClass(
                         "org.apache.http.conn.scheme.Scheme", lpparam.classLoader
                     ), "https", sslSocketFactory, 443
                 )
             )
 
             // 创建连接管理�?
-            XposedHelpers.newInstance(
-                XposedHelpers.findClass(
+            ReflectX.newInstance(
+                ReflectX.findClass(
                     "org.apache.http.impl.conn.SingleClientConnManager", lpparam.classLoader
                 ), schemeRegistry
             )
@@ -269,14 +272,14 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
         try {
             // Android 7.0+ 的核弹级修复
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                XposedHelpers.findAndHookMethod(
+                HookBridge.findAndHookMethod(
                     "android.security.net.config.RootTrustManager",
                     lpparam.classLoader,
                     "checkServerTrusted",
                     Array<X509Certificate>::class.java,
                     String::class.java,
-                    object : XC_MethodReplacement() {
-                        override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                    object : ReplaceCallback() {
+                        override fun replaceHookedMethod(param: HookParam): Any? {
                             LogX.e(TAG, "Bypassed RootTrustManager verification")
                             return null
                         }
@@ -284,18 +287,18 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
             }
 
             // 通杀所�?Provider 实现
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "java.security.Provider",
                 lpparam.classLoader,
                 "getService",
                 String::class.java,
                 String::class.java,
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
+                object : HookCallback() {
+                    override fun afterHookedMethod(param: HookParam) {
                         if ("CertPathValidator" == param.args[0] && "PKIX" == param.args[1]) {
                             // 替换为始终信任的验证�?
-                            param.result = XposedHelpers.newInstance(
-                                XposedHelpers.findClass(
+                            param.result = ReflectX.newInstance(
+                                ReflectX.findClass(
                                     "sun.security.provider.certpath.PKIXCertPathValidator",
                                     lpparam.classLoader
                                 )
@@ -310,7 +313,7 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
 
     private fun hookRootTrustManager() {
         try {
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "com.android.org.conscrypt.TrustManagerImpl",
                 lpparam.classLoader,
                 "checkTrusted",
@@ -319,8 +322,8 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
                 String::class.java,
                 Boolean::class.java,
                 Boolean::class.java,
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                object : ReplaceCallback() {
+                    override fun replaceHookedMethod(param: HookParam): Any? {
                         LogX.e(TAG, "Bypassed Conscrypt TrustManager verification")
                         return null
                     }
@@ -333,16 +336,16 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
     private fun bypassCertPathValidation() {
         try {
             // 多重保险：同�?Hook 引擎方法和实现类
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "java.security.cert.CertPathValidatorSpi",
                 lpparam.classLoader,
                 "engineValidate",
                 CertPath::class.java,
                 CertPathParameters::class.java,
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any {
-                        return XposedHelpers.newInstance(
-                            XposedHelpers.findClass(
+                object : ReplaceCallback() {
+                    override fun replaceHookedMethod(param: HookParam): Any {
+                        return ReflectX.newInstance(
+                            ReflectX.findClass(
                                 "java.security.cert.PKIXCertPathValidatorResult",
                                 lpparam.classLoader
                             ), TrustAnchor(
@@ -354,16 +357,16 @@ class JustTrustMePro(private val lpparam: LPParam) : HookImpl {
                 })
 
             // 针对 Android 特定实现
-            XposedHelpers.findAndHookMethod(
+            HookBridge.findAndHookMethod(
                 "com.android.org.bouncycastle.jce.provider.PKIXCertPathValidatorSpi",
                 lpparam.classLoader,
                 "engineValidate",
                 CertPath::class.java,
                 CertPathParameters::class.java,
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any {
-                        return XposedHelpers.newInstance(
-                            XposedHelpers.findClass(
+                object : ReplaceCallback() {
+                    override fun replaceHookedMethod(param: HookParam): Any {
+                        return ReflectX.newInstance(
+                            ReflectX.findClass(
                                 "java.security.cert.PKIXCertPathValidatorResult",
                                 lpparam.classLoader
                             ), TrustAnchor(

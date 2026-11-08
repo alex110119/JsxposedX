@@ -1,17 +1,20 @@
 package com.jsxposed.x.feature.jsxposed.bridge
 
-import com.jsxposed.x.feature.jsxposed.manager.JxSingleThreadDispatcher
+import com.jsxposed.x.hook.compat.HookBridge
+import com.jsxposed.x.hook.compat.HookCallback
+import com.jsxposed.x.hook.compat.HookParam
+import com.jsxposed.x.hook.compat.ReflectX
+import com.jsxposed.x.hook.compat.Unhook
 import com.jsxposed.x.core.utils.log.LogX
+import com.jsxposed.x.feature.jsxposed.manager.JxSingleThreadDispatcher
 import com.whl.quickjs.wrapper.JSArray
 import com.whl.quickjs.wrapper.JSFunction
 import com.whl.quickjs.wrapper.JSObject
 import com.whl.quickjs.wrapper.QuickJSContext
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
 import java.lang.reflect.Member
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+
 
 /**
  * 核心 Hook 桥接：将 Xposed 的 findAndHookMethod 暴露给 JS，并支持参数类型数组
@@ -24,7 +27,7 @@ class JxHookBridge(
 ) {
     private val TAG = "JxHookBridge"
     private val hookIdCounter = AtomicInteger(0)
-    private val hookStore = ConcurrentHashMap<Int, XC_MethodHook.Unhook>()
+    private val hookStore = ConcurrentHashMap<Int, Unhook>()
     private val hookOwnerStore = ConcurrentHashMap<Int, String>()
     private val scriptHookIds = ConcurrentHashMap<String, MutableSet<Int>>()
 
@@ -93,7 +96,7 @@ class JxHookBridge(
             }
             argsArray.add(callback)
 
-            val unhook = XposedHelpers.findAndHookMethod(
+            val unhook = HookBridge.findAndHookMethod(
                 className, classLoader, methodName, *argsArray.toArray()
             )
             val id = hookIdCounter.incrementAndGet()
@@ -117,7 +120,7 @@ class JxHookBridge(
             }
             argsArray.add(callback)
 
-            val unhook = XposedHelpers.findAndHookConstructor(
+            val unhook = HookBridge.findAndHookConstructor(
                 className, classLoader, *argsArray.toArray()
             )
             val id = hookIdCounter.incrementAndGet()
@@ -152,9 +155,9 @@ class JxHookBridge(
     fun hookAllMethods(className: String, methodName: String, callbacks: JSObject): JSArray {
         val ids = qjs.createNewJSArray()
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
+            val clazz = ReflectX.findClass(className, classLoader)
             val callback = buildCallback(callbacks)
-            val unhooks = XposedBridge.hookAllMethods(clazz, methodName, callback)
+            val unhooks = HookBridge.hookAllMethods(clazz, methodName, callback)
             var idx = 0
             for (u in unhooks) {
                 val id = hookIdCounter.incrementAndGet()
@@ -174,9 +177,9 @@ class JxHookBridge(
     fun hookAllConstructors(className: String, callbacks: JSObject): JSArray {
         val ids = qjs.createNewJSArray()
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
+            val clazz = ReflectX.findClass(className, classLoader)
             val callback = buildCallback(callbacks)
-            val unhooks = XposedBridge.hookAllConstructors(clazz, callback)
+            val unhooks = HookBridge.hookAllConstructors(clazz, callback)
             var idx = 0
             for (u in unhooks) {
                 val id = hookIdCounter.incrementAndGet()
@@ -203,7 +206,7 @@ class JxHookBridge(
         }
         return try {
             val realArgs = if (jsArgs != null) BridgeUtils.jsArrayToObjectArray(jsArgs, qjs) else arrayOf()
-            val result = XposedBridge.invokeOriginalMethod(methodObj, thisObj, realArgs)
+            val result = HookBridge.invokeOriginalMethod(methodObj, thisObj, realArgs)
             BridgeUtils.wrapJavaObject(qjs, result)
         } catch (e: Throwable) {
             LogX.e(TAG, "invokeOriginal 异常: ${e.message}")
@@ -213,13 +216,13 @@ class JxHookBridge(
 
     // ── 内部工具 ──
 
-    private fun buildCallback(callbacks: JSObject): XC_MethodHook {
+    private fun buildCallback(callbacks: JSObject): HookCallback {
         val beforeCb = callbacks.getProperty("before") as? JSFunction
         val afterCb = callbacks.getProperty("after") as? JSFunction
         val scriptName = (currentScriptKey ?: "<unknown>").substringAfterLast('/')
         val runId = currentRunId
-        return object : XC_MethodHook() {
-            override fun beforeHookedMethod(param: MethodHookParam) {
+        return object : HookCallback() {
+            override fun beforeHookedMethod(param: HookParam) {
                 try {
                     if (beforeCb != null) {
                         dispatcher.submit {
@@ -231,7 +234,7 @@ class JxHookBridge(
                 }
                 catch (e: Throwable) { LogX.e(TAG, "before JS 异常: ${e.message}") }
             }
-            override fun afterHookedMethod(param: MethodHookParam) {
+            override fun afterHookedMethod(param: HookParam) {
                 try {
                     if (afterCb != null) {
                         dispatcher.submit {
@@ -246,7 +249,7 @@ class JxHookBridge(
         }
     }
 
-    private fun wrapParam(param: XC_MethodHook.MethodHookParam): JSObject {
+    private fun wrapParam(param: HookParam): JSObject {
         val jsParam = qjs.createNewJSObject()
 
         jsParam.setProperty("raw",

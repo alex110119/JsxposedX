@@ -1,18 +1,20 @@
 package com.jsxposed.x.feature.hook.quick_functions
 
+import com.jsxposed.x.hook.compat.HookBridge
+import com.jsxposed.x.hook.compat.HookCallback
+import com.jsxposed.x.hook.compat.HookParam
 import android.content.Context
 import com.jsxposed.x.core.models.Encrypt
-import com.jsxposed.x.feature.hook.HookImpl
-import com.jsxposed.x.feature.hook.utils.ByteUtils
-import com.jsxposed.x.feature.hook.utils.CryptoAuditor
 import com.jsxposed.x.core.utils.log.LogX
 import com.jsxposed.x.core.utils.shell.PiniaRoot
+import com.jsxposed.x.feature.hook.HookImpl
 import com.jsxposed.x.feature.hook.LPParam
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
+import com.jsxposed.x.feature.hook.utils.ByteUtils
+import com.jsxposed.x.feature.hook.utils.CryptoAuditor
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
+
 
 // 已移至 CryptoModels.kt
 
@@ -59,22 +61,22 @@ class HookAlgorithmicTracking(private val lpparam: LPParam) : HookImpl {
 
     private fun hookCryptoInfrastructure() {
         // IV 捕获
-        XposedBridge.hookAllConstructors(IvParameterSpec::class.java, object : XC_MethodHook() {
-            override fun afterHookedMethod(param: MethodHookParam) {
+        HookBridge.hookAllConstructors(IvParameterSpec::class.java, object : HookCallback() {
+            override fun afterHookedMethod(param: HookParam) {
                 currentIv.set((param.thisObject as IvParameterSpec).iv)
             }
         })
 
         // 密钥捕获
-        XposedBridge.hookAllConstructors(SecretKeySpec::class.java, object : XC_MethodHook() {
-            override fun afterHookedMethod(param: MethodHookParam) {
+        HookBridge.hookAllConstructors(SecretKeySpec::class.java, object : HookCallback() {
+            override fun afterHookedMethod(param: HookParam) {
                 currentKey.set((param.thisObject as SecretKeySpec).encoded)
             }
         })
 
         // 模式捕获 (全面覆盖所有 init 重载)
-        XposedBridge.hookAllMethods(Cipher::class.java, "init", object : XC_MethodHook() {
-            override fun beforeHookedMethod(param: MethodHookParam) {
+        HookBridge.hookAllMethods(Cipher::class.java, "init", object : HookCallback() {
+            override fun beforeHookedMethod(param: HookParam) {
                 if (param.args.isNotEmpty() && param.args[0] is Int) {
                     currentMode.set(param.args[0] as Int)
                 }
@@ -82,15 +84,15 @@ class HookAlgorithmicTracking(private val lpparam: LPParam) : HookImpl {
         })
 
         // 核心拦截点 (全面覆盖所有 doFinal 重载)
-        XposedBridge.hookAllMethods(Cipher::class.java, "doFinal", object : XC_MethodHook() {
-            override fun beforeHookedMethod(param: MethodHookParam) {
+        HookBridge.hookAllMethods(Cipher::class.java, "doFinal", object : HookCallback() {
+            override fun beforeHookedMethod(param: HookParam) {
                 // 加密前的输入篡改机会
                 if (currentMode.get() == Cipher.ENCRYPT_MODE) {
                     tryIntercept(param, isInput = true)
                 }
             }
 
-            override fun afterHookedMethod(param: MethodHookParam) {
+            override fun afterHookedMethod(param: HookParam) {
                 // 审计总是在最后执行，且不受篡改影响
                 performAudit(param)
 
@@ -127,7 +129,7 @@ class HookAlgorithmicTracking(private val lpparam: LPParam) : HookImpl {
         return fingerprint to fingerprintSource
     }
 
-    private fun tryIntercept(param: XC_MethodHook.MethodHookParam, isInput: Boolean) {
+    private fun tryIntercept(param: HookParam, isInput: Boolean) {
         if (interceptors.isEmpty()) return
 
         // 智能获取数据：针对不同的 doFinal 重载获取 ByteArray 数据
@@ -177,7 +179,7 @@ class HookAlgorithmicTracking(private val lpparam: LPParam) : HookImpl {
         }
     }
 
-    private fun performAudit(param: XC_MethodHook.MethodHookParam) {
+    private fun performAudit(param: HookParam) {
         try {
             val cipher = param.thisObject as Cipher
             val inputBytes = if (param.args.isNotEmpty() && param.args[0] is ByteArray) param.args[0] as ByteArray else byteArrayOf()

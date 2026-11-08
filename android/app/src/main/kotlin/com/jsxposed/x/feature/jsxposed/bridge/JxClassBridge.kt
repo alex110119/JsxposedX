@@ -1,10 +1,11 @@
 package com.jsxposed.x.feature.jsxposed.bridge
 
+import com.jsxposed.x.hook.compat.ReflectX
 import com.jsxposed.x.core.utils.log.LogX
 import com.whl.quickjs.wrapper.JSArray
 import com.whl.quickjs.wrapper.JSObject
 import com.whl.quickjs.wrapper.QuickJSContext
-import de.robv.android.xposed.XposedHelpers
+
 
 /**
  * 类查询与对象实例化能力桥接
@@ -17,7 +18,7 @@ class JxClassBridge(private val qjs: QuickJSContext, private val classLoader: Cl
      */
     fun findClass(className: String): Any? {
         return try {
-            val clazz = XposedHelpers.findClassIfExists(className, classLoader)
+            val clazz = ReflectX.findClassIfExists(className, classLoader)
             clazz != null
         } catch (e: Exception) {
             LogX.e(TAG, "findClass error: ${e.message}")
@@ -30,7 +31,7 @@ class JxClassBridge(private val qjs: QuickJSContext, private val classLoader: Cl
      */
     fun loadClass(className: String): Any? {
         return try {
-            val clazz = XposedHelpers.findClassIfExists(className, classLoader)
+            val clazz = ReflectX.findClassIfExists(className, classLoader)
             if (clazz != null) BridgeUtils.wrapJavaObject(qjs, clazz) else null
         } catch (e: Exception) {
             LogX.e(TAG, "loadClass error: ${e.message}")
@@ -43,16 +44,16 @@ class JxClassBridge(private val qjs: QuickJSContext, private val classLoader: Cl
      */
     fun newInstance(className: String, paramTypesArray: JSArray?, paramValuesArray: JSArray?): Any? {
         try {
-            val clazz = XposedHelpers.findClassIfExists(className, classLoader) ?: return null
+            val clazz = ReflectX.findClassIfExists(className, classLoader) ?: return null
             
             val types = BridgeUtils.jsArrayToStringArray(paramTypesArray)
             val values = BridgeUtils.jsArrayToObjectArray(paramValuesArray, qjs)
 
             val result = if (types.isNotEmpty()) {
                 val paramClasses = types.map { BridgeUtils.parseTypeToClass(it, classLoader) as Class<*> }.toTypedArray()
-                XposedHelpers.newInstance(clazz, paramClasses, *values)
+                ReflectX.newInstance(clazz, paramClasses, *values)
             } else {
-                XposedHelpers.newInstance(clazz, *values)
+                ReflectX.newInstance(clazz, *values)
             }
             return BridgeUtils.wrapJavaObject(qjs, result)
         } catch (e: Exception) {
@@ -67,7 +68,7 @@ class JxClassBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return qjs.createNewJSArray()
         val arr = qjs.createNewJSArray()
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
+            val clazz = ReflectX.findClass(className, classLoader)
             val methods = clazz.declaredMethods
             for (i in methods.indices) {
                 arr.set(methods[i].name, i)
@@ -82,7 +83,7 @@ class JxClassBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return qjs.createNewJSArray()
         val arr = qjs.createNewJSArray()
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
+            val clazz = ReflectX.findClass(className, classLoader)
             val fields = clazz.declaredFields
             for (i in fields.indices) {
                 arr.set(fields[i].name, i)
@@ -97,7 +98,7 @@ class JxClassBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return qjs.createNewJSArray()
         val arr = qjs.createNewJSArray()
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
+            val clazz = ReflectX.findClass(className, classLoader)
             val ctors = clazz.declaredConstructors
             for (i in ctors.indices) {
                 val sig = ctors[i].parameterTypes.joinToString(",") { it.name }
@@ -112,7 +113,7 @@ class JxClassBridge(private val qjs: QuickJSContext, private val classLoader: Cl
     fun getSuperclass(args: Array<Any?>?): String? {
         val className = args?.get(0)?.toString() ?: return null
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
+            val clazz = ReflectX.findClass(className, classLoader)
             clazz.superclass?.name
         } catch (e: Exception) {
             LogX.e(TAG, "getSuperclass error: ${e.message}")
@@ -124,7 +125,7 @@ class JxClassBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val className = args?.get(0)?.toString() ?: return qjs.createNewJSArray()
         val arr = qjs.createNewJSArray()
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
+            val clazz = ReflectX.findClass(className, classLoader)
             val ifaces = clazz.interfaces
             for (i in ifaces.indices) {
                 arr.set(ifaces[i].name, i)
@@ -139,7 +140,7 @@ class JxClassBridge(private val qjs: QuickJSContext, private val classLoader: Cl
         val obj = BridgeUtils.unwrapJavaObject(args?.get(0)) ?: return false
         val className = args?.getOrNull(1)?.toString() ?: return false
         return try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
+            val clazz = ReflectX.findClass(className, classLoader)
             clazz.isInstance(obj)
         } catch (e: Exception) {
             LogX.e(TAG, "instanceOf error: ${e.message}")

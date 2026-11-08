@@ -1,9 +1,10 @@
 package com.jsxposed.x.feature.jsxposed.bridge
 
+import com.jsxposed.x.hook.compat.HookBridge
 import com.whl.quickjs.wrapper.QuickJSContext
-import de.robv.android.xposed.XposedBridge
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+
 
 /**
  * Xposed 官方日志能力桥接
@@ -56,7 +57,7 @@ class JxLogBridge(private val qjs: QuickJSContext) {
         val encodedRunId = encode(currentRunId)
         val encodedScript = encode(currentScriptName)
         val encodedMessage = encode(message)
-        XposedBridge.log("JXCONSOLE|v2|xposed|$encodedRunId|$encodedScript|$level|$encodedMessage")
+        HookBridge.log("JXCONSOLE|v2|xposed|$encodedRunId|$encodedScript|$level|$encodedMessage")
     }
 
     private fun encode(value: String): String =

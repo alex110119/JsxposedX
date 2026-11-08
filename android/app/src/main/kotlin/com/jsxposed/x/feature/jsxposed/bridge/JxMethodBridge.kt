@@ -1,9 +1,10 @@
 package com.jsxposed.x.feature.jsxposed.bridge
 
+import com.jsxposed.x.hook.compat.ReflectX
 import com.jsxposed.x.core.utils.log.LogX
 import com.whl.quickjs.wrapper.JSArray
 import com.whl.quickjs.wrapper.QuickJSContext
-import de.robv.android.xposed.XposedHelpers
+
 
 /**
  * 原生方法强制调用桥接
@@ -23,9 +24,9 @@ class JxMethodBridge(private val qjs: QuickJSContext, private val classLoader: C
 
             val result = if (types.isNotEmpty()) {
                 val paramClasses = types.map { BridgeUtils.parseTypeToClass(it, classLoader) as Class<*> }.toTypedArray()
-                XposedHelpers.callMethod(realObj, methodName, paramClasses, *values)
+                ReflectX.callMethod(realObj, methodName, paramClasses, *values)
             } else {
-                XposedHelpers.callMethod(realObj, methodName, *values)
+                ReflectX.callMethod(realObj, methodName, *values)
             }
             return BridgeUtils.wrapJavaObject(qjs, result)
         } catch (e: Exception) {
@@ -39,15 +40,15 @@ class JxMethodBridge(private val qjs: QuickJSContext, private val classLoader: C
      */
     fun callStaticMethod(className: String, methodName: String, paramTypesArray: JSArray?, paramValuesArray: JSArray?): Any? {
         try {
-            val clazz = XposedHelpers.findClass(className, classLoader)
+            val clazz = ReflectX.findClass(className, classLoader)
             val types = BridgeUtils.jsArrayToStringArray(paramTypesArray)
             val values = BridgeUtils.jsArrayToObjectArray(paramValuesArray, qjs)
 
             val result = if (types.isNotEmpty()) {
                 val paramClasses = types.map { BridgeUtils.parseTypeToClass(it, classLoader) as Class<*> }.toTypedArray()
-                XposedHelpers.callStaticMethod(clazz, methodName, paramClasses, *values)
+                ReflectX.callStaticMethod(clazz, methodName, paramClasses, *values)
             } else {
-                XposedHelpers.callStaticMethod(clazz, methodName, *values)
+                ReflectX.callStaticMethod(clazz, methodName, *values)
             }
             return BridgeUtils.wrapJavaObject(qjs, result)
         } catch (e: Exception) {
