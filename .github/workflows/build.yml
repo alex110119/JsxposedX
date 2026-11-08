@@ -192,6 +192,32 @@ jobs:
       - name: Show APK outputs
         run: ls -lh build/app/outputs/flutter-apk/
 
+      # 打印签名证书指纹，并与原版 base.apk 的指纹比对：
+      # 一致 -> 可直接覆盖安装；不一致 -> 需 CorePatch 或卸载重装。
+      - name: Verify APK signature
+        if: matrix.build_type == 'release'
+        run: |
+          set -uo pipefail
+          APK="build/app/outputs/flutter-apk/app-${{ matrix.flavor }}-release.apk"
+          if [ ! -f "$APK" ]; then
+            echo "::warning::未找到 $APK，跳过签名校验"
+            exit 0
+          fi
+          SDK_DIR="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          APKSIGNER="$(find "$SDK_DIR/build-tools" -type f -name apksigner | sort | tail -1)"
+          if ! "$APKSIGNER" verify --print-certs "$APK" > /tmp/apk-certs.txt 2>&1; then
+            echo "::warning::APK 未签名或签名无效（通常是未配置签名 secrets）"
+            tail -5 /tmp/apk-certs.txt || true
+            exit 0
+          fi
+          cat /tmp/apk-certs.txt
+          ORIGIN_FP="71a4defb6ed097f2c4cbc2809881f9405a88747729c86f7c8565e7ba98afd822"
+          if grep -qi "$ORIGIN_FP" /tmp/apk-certs.txt; then
+            echo "::notice::签名与原版一致（SHA-256 $ORIGIN_FP），可直接覆盖安装"
+          else
+            echo "::warning::签名与原版不一致，无法直接覆盖安装。原版证书 SHA-256: $ORIGIN_FP"
+          fi
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
